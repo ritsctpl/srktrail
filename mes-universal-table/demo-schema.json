@@ -1,0 +1,27 @@
+{
+  "table_config": {
+    "columns": [
+      { "field_id": "name", "field_name": "Name", "field_type": "text" },
+      { "field_id": "qty", "field_name": "Quantity", "field_type": "number", "unit": "pcs" },
+      { "field_id": "approved", "field_name": "Approved", "field_type": "boolean" },
+      {
+        "field_id": "category",
+        "field_name": "Category",
+        "field_type": "enum",
+        "options": [
+          { "label": "A", "value": "A" },
+          { "label": "B", "value": "B" }
+        ]
+      },
+      {
+        "field_id": "total",
+        "field_name": "Total",
+        "field_type": "formula",
+        "formula": "qty * 2"
+      }
+    ],
+    "row_controls": { "allow_add_remove": true, "initial_rows": 2 },
+    "pagination": { "enabled": true, "rows_per_page": 5 },
+    "style": { "table_border": true, "striped_rows": true, "header_color": "#eee" }
+  }
+}
