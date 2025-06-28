@@ -1,9 +1,22 @@
 {
   "table_config": {
+    "header_structure": [
+      {
+        "label": "Details",
+        "children": [
+          { "label": "Name", "columns": ["name"] },
+          { "label": "Category", "columns": ["category"] }
+        ]
+      },
+      { "label": "Qty", "columns": ["qty"] },
+      { "label": "Approved", "columns": ["approved"] },
+      { "label": "Fetched", "columns": ["api_value"] },
+      { "label": "Total", "columns": ["total"] }
+    ],
     "columns": [
-      { "field_id": "name", "field_name": "Name", "field_type": "text" },
-      { "field_id": "qty", "field_name": "Quantity", "field_type": "number", "unit": "pcs" },
-      { "field_id": "approved", "field_name": "Approved", "field_type": "boolean" },
+      { "field_id": "name", "field_name": "Name", "field_type": "text", "default_value": "Item" },
+      { "field_id": "qty", "field_name": "Quantity", "field_type": "number", "unit": "pcs", "validation": { "min": 0 } },
+      { "field_id": "approved", "field_name": "Approved", "field_type": "boolean", "default_value": false },
       {
         "field_id": "category",
         "field_name": "Category",
@@ -13,6 +26,7 @@
           { "label": "B", "value": "B" }
         ]
       },
+      { "field_id": "api_value", "field_name": "API Value", "field_type": "api", "endpoint": "/api/value", "bind_field": "name" },
       {
         "field_id": "total",
         "field_name": "Total",
@@ -20,7 +34,7 @@
         "formula": "qty * 2"
       }
     ],
-    "row_controls": { "allow_add_remove": true, "initial_rows": 2 },
+    "row_controls": { "allow_add_remove": true, "initial_rows": 2, "side": "left" },
     "pagination": { "enabled": true, "rows_per_page": 5 },
     "style": { "table_border": true, "striped_rows": true, "header_color": "#eee" }
   }
