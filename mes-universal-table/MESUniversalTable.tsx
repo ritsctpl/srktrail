@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import FileUpload from './helpers/FileUpload'
 import SignaturePad from './helpers/SignaturePad'
-import './mes-universal-table.css'
 import {
   ColumnDef,
   flexRender,
