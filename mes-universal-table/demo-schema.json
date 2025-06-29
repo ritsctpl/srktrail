@@ -26,7 +26,7 @@
           { "label": "B", "value": "B" }
         ]
       },
-      { "field_id": "api_value", "field_name": "API Value", "field_type": "api", "endpoint": "/api/value", "bind_field": "name" },
+      { "field_id": "api_value", "field_name": "API Value", "field_type": "lookup", "endpoint": "/api/value", "bind_field": "name" },
       {
         "field_id": "total",
         "field_name": "Total",
