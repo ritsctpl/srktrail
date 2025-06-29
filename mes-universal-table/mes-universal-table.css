@@ -19,7 +19,25 @@
 .table-container th {
   background-color: #f5f5f5;
   font-weight: 600;
+  color: #333;
 }
 .table-container tr:nth-child(odd) {
   background-color: #fafafa;
+}
+
+.table-container button {
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  background-color: #1d4ed8;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+.table-container button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.table-container button:hover:not(:disabled) {
+  background-color: #2563eb;
 }

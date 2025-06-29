@@ -1,3 +1,4 @@
+'use client'
 import { useState } from 'react'
 import MESUniversalTable from './MESUniversalTable'
 import demoSchema from './demo-schema.json'

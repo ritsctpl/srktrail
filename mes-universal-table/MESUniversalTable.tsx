@@ -1,3 +1,4 @@
+'use client'
 import React, { useState, useEffect } from 'react'
 import FileUpload from './helpers/FileUpload'
 import SignaturePad from './helpers/SignaturePad'
@@ -435,8 +436,9 @@ export default function MESUniversalTable({
                       cell.columns && cell.columns.length === 1 && // Ensure it maps to a single column
                       (
                         <button
+                          type="button"
                           onClick={() => removeColumnByFieldId(cell.columns[0])}
-                          className="ml-1 text-xs text-red-500 hover:text-red-700"
+                          className="ml-1 text-xs text-red-500 hover:text-red-700 transition focus:outline-none"
                           title={`Remove ${cell.label} column`}
                         >
                           x
@@ -465,7 +467,7 @@ export default function MESUniversalTable({
             >
               {schema.table_config.row_controls?.allow_add_remove && schema.table_config.row_controls?.side === 'left' && (
                 <td className="border px-2 py-1">
-                  <button onClick={() => removeRow(row.index)} className="text-red-500 text-xs">Delete</button>
+                  <button type="button" onClick={() => removeRow(row.index)} className="text-red-500 hover:text-red-700 transition text-xs">Delete</button>
                 </td>
               )}
               {row.getVisibleCells().map(cell => (
@@ -473,7 +475,7 @@ export default function MESUniversalTable({
               ))}
               {schema.table_config.row_controls?.allow_add_remove && schema.table_config.row_controls?.side !== 'left' && (
                 <td className="border px-2 py-1">
-                  <button onClick={() => removeRow(row.index)} className="text-red-500 text-xs">Delete</button>
+                  <button type="button" onClick={() => removeRow(row.index)} className="text-red-500 hover:text-red-700 transition text-xs">Delete</button>
                 </td>
               )}
             </tr>
@@ -482,21 +484,21 @@ export default function MESUniversalTable({
       </table>
       {schema.table_config.row_controls?.allow_add_remove && (
         <div className="mt-2 flex gap-2">
-          <button onClick={addRow} className="px-2 py-1 border rounded text-sm">Add Row</button>
-          <button onClick={mergeRows} className="px-2 py-1 border rounded text-sm">Merge Rows</button>
-          <button onClick={splitRow} className="px-2 py-1 border rounded text-sm">Split Row</button>
+          <button type="button" onClick={addRow} className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition text-sm">Add Row</button>
+          <button type="button" onClick={mergeRows} className="px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 transition text-sm">Merge Rows</button>
+          <button type="button" onClick={splitRow} className="px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 transition text-sm">Split Row</button>
         </div>
       )}
       <div className="mt-2 flex gap-2">
-        <button onClick={addColumn} className="px-2 py-1 border rounded text-sm">Add Column</button>
-        <button onClick={mergeColumns} className="px-2 py-1 border rounded text-sm">Merge Columns</button>
-        <button onClick={splitColumn} className="px-2 py-1 border rounded text-sm">Split Column</button>
+        <button type="button" onClick={addColumn} className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition text-sm">Add Column</button>
+        <button type="button" onClick={mergeColumns} className="px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 transition text-sm">Merge Columns</button>
+        <button type="button" onClick={splitColumn} className="px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 transition text-sm">Split Column</button>
       </div>
       {totalPages > 1 && (
         <div className="mt-2 flex gap-2">
-          <button disabled={page === 0} onClick={() => setPage(p => p - 1)} className="border px-2 py-1 text-sm">Prev</button>
+          <button type="button" disabled={page === 0} onClick={() => setPage(p => p - 1)} className="border px-3 py-1 text-sm rounded disabled:opacity-50">Prev</button>
           <span className="text-sm">Page {page + 1} of {totalPages}</span>
-          <button disabled={page === totalPages - 1} onClick={() => setPage(p => p + 1)} className="border px-2 py-1 text-sm">Next</button>
+          <button type="button" disabled={page === totalPages - 1} onClick={() => setPage(p => p + 1)} className="border px-3 py-1 text-sm rounded disabled:opacity-50">Next</button>
         </div>
       )}
     </div>
