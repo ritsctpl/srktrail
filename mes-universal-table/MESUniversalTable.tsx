@@ -299,14 +299,13 @@ export default function MESUniversalTable({
     setRows(r => r.map(row => ({ ...row, [id]: '' })))
   }
 
-  const removeColumn = (index: number) => {
-    const col = cols[index]
-    setCols(c => c.filter((_, i) => i !== index))
-    setRows(r => r.map(row => {
-      const { [col.field_id]: _, ...rest } = row
-      return rest
-    }))
-  }
+  const removeColumnByFieldId = (fieldIdToRemove: string) => {
+    setCols(currentCols => currentCols.filter(c => c.field_id !== fieldIdToRemove));
+    setRows(currentRows => currentRows.map(row => {
+      const { [fieldIdToRemove]: _, ...rest } = row;
+      return rest;
+    }));
+  };
 
   const mergeRows = () => {
     if (rows.length < 2) return
@@ -429,9 +428,21 @@ export default function MESUniversalTable({
                     style={{ backgroundColor: style.header_color, color: style.header_font_color }}
                   >
                     {cell.label}
-                    {i === headerRows.length - 1 && !cell.children && (
-                      <button onClick={() => removeColumn(idx)} className="ml-1 text-xs text-red-500">x</button>
-                    )}
+                    {
+                      // Add remove button for leaf header cells in the last row of the header
+                      i === headerRows.length - 1 &&
+                      !cell.children &&
+                      cell.columns && cell.columns.length === 1 && // Ensure it maps to a single column
+                      (
+                        <button
+                          onClick={() => removeColumnByFieldId(cell.columns[0])}
+                          className="ml-1 text-xs text-red-500 hover:text-red-700"
+                          title={`Remove ${cell.label} column`}
+                        >
+                          x
+                        </button>
+                      )
+                    }
                   </th>
                 )
               })}
