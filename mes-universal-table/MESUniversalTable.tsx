@@ -50,6 +50,7 @@ export interface TableSchema {
       max_rows?: number
       allow_add_remove?: boolean
       initial_rows?: number
+      side?: 'left' | 'right'
     }
     pagination?: { enabled?: boolean; rows_per_page?: number }
     column_layout?: {
@@ -86,7 +87,7 @@ export default function MESUniversalTable({
   lookupOptions,
   userRole,
 }: MESUniversalTableProps) {
-  const columns = schema.table_config.columns
+  const [cols, setCols] = useState<Column[]>(schema.table_config.columns)
   const style = schema.table_config.style || {}
 
   const [rows, setRows] = useState<any[]>([])
@@ -100,7 +101,14 @@ export default function MESUniversalTable({
       setRows(schema.table_config.preload_rows)
     } else {
       const count = schema.table_config.row_controls?.initial_rows || 1
-      setRows(Array.from({ length: count }, () => ({ })))
+      const defaults = () => {
+        const obj: any = {}
+        cols.forEach(c => {
+          if (c.default_value !== undefined) obj[c.field_id] = c.default_value
+        })
+        return obj
+      }
+      setRows(Array.from({ length: count }, defaults))
     }
   }, [data, schema.table_config])
 
@@ -113,6 +121,22 @@ export default function MESUniversalTable({
       const newRows = [...r]
       newRows[rowIndex] = { ...newRows[rowIndex], [field]: value }
       return newRows
+    })
+    cols.forEach(col => {
+      if (col.endpoint && col.bind_field === field) {
+        fetch(`${col.endpoint}?value=${encodeURIComponent(String(value))}`)
+          .then(res => res.json())
+          .then(data => {
+            setRows(curr => {
+              const upd = [...curr]
+              if (upd[rowIndex]) {
+                upd[rowIndex] = { ...upd[rowIndex], [col.field_id]: data.value ?? data }
+              }
+              return upd
+            })
+          })
+          .catch(() => {})
+      }
     })
   }
 
@@ -158,8 +182,11 @@ export default function MESUniversalTable({
           </td>
         )
       case 'number':
+        const invalid =
+          (col.validation?.min !== undefined && Number(row[col.field_id]) < col.validation.min) ||
+          (col.validation?.max !== undefined && Number(row[col.field_id]) > col.validation.max)
         return (
-          <td {...commonProps}>
+          <td {...commonProps} className={invalid ? 'border-red-500' : ''}>
             <input
               type="number"
               className="border rounded w-full text-sm p-1"
@@ -236,22 +263,110 @@ export default function MESUniversalTable({
   }
 
   const addRow = () => {
-    setRows(r => [...r, {}])
+    setRows(r => {
+      const newRow: any = {}
+      cols.forEach(c => {
+        if (c.default_value !== undefined) {
+          newRow[c.field_id] = c.default_value
+        }
+      })
+      const newRows = [...r, newRow]
+      if (schema.table_config.pagination?.enabled) {
+        const rowsPerPage = schema.table_config.pagination.rows_per_page || 5
+        setPage(Math.floor((newRows.length - 1) / rowsPerPage))
+      }
+      return newRows
+    })
   }
 
   const removeRow = (index: number) => {
-    setRows(r => r.filter((_, i) => i !== index))
+    setRows(r => {
+      const newRows = r.filter((_, i) => i !== index)
+      if (schema.table_config.pagination?.enabled) {
+        const rowsPerPage = schema.table_config.pagination.rows_per_page || 5
+        const lastPage = Math.max(0, Math.ceil(newRows.length / rowsPerPage) - 1)
+        setPage(p => Math.min(p, lastPage))
+      }
+      return newRows
+    })
+  }
+
+  const addColumn = () => {
+    const name = prompt('Column name?') || `Column ${cols.length + 1}`
+    const id = name.toLowerCase().replace(/\s+/g, '_')
+    const newCol: Column = { field_id: id, field_name: name, field_type: 'text' }
+    setCols(c => [...c, newCol])
+    setRows(r => r.map(row => ({ ...row, [id]: '' })))
+  }
+
+  const removeColumn = (index: number) => {
+    const col = cols[index]
+    setCols(c => c.filter((_, i) => i !== index))
+    setRows(r => r.map(row => {
+      const { [col.field_id]: _, ...rest } = row
+      return rest
+    }))
+  }
+
+  const mergeRows = () => {
+    if (rows.length < 2) return
+    setRows(r => {
+      const a = r[r.length - 2]
+      const b = r[r.length - 1]
+      const merged = { ...a, ...b }
+      const newRows = [...r.slice(0, r.length - 2), merged]
+      if (schema.table_config.pagination?.enabled) {
+        const rowsPerPage = schema.table_config.pagination.rows_per_page || 5
+        const lastPage = Math.max(0, Math.ceil(newRows.length / rowsPerPage) - 1)
+        setPage(p => Math.min(p, lastPage))
+      }
+      return newRows
+    })
+  }
+
+  const splitRow = () => {
+    if (!rows.length) return
+    setRows(r => {
+      const row = r[r.length - 1]
+      const clone = { ...row }
+      return [...r, clone]
+    })
+  }
+
+  const mergeColumns = () => {
+    if (cols.length < 2) return
+    setCols(c => {
+      const a = c[c.length - 2]
+      const b = c[c.length - 1]
+      const merged: Column = { ...a, field_name: `${a.field_name}/${b.field_name}` }
+      const newCols = [...c.slice(0, c.length - 2), merged]
+      setRows(r => r.map(row => {
+        return {
+          ...row,
+          [a.field_id]: `${row[a.field_id] || ''} ${row[b.field_id] || ''}`.trim(),
+        }
+      }))
+      return newCols
+    })
+  }
+
+  const splitColumn = () => {
+    if (!cols.length) return
+    const col = cols[cols.length - 1]
+    const newCol: Column = { ...col, field_id: col.field_id + '_copy', field_name: col.field_name + ' Copy' }
+    setCols(c => [...c, newCol])
+    setRows(r => r.map(row => ({ ...row, [newCol.field_id]: row[col.field_id] })))
   }
 
   // build column definitions for TanStack table
   const columnDefs = React.useMemo<ColumnDef<any, any>[]>(() => {
-    return columns.map(col => ({
+    return cols.map(col => ({
       id: col.field_id,
       header: col.field_name,
       accessorFn: (row: any) => row[col.field_id],
       cell: info => renderCell(col, info.row.original, info.row.index),
     }))
-  }, [columns, rows])
+  }, [cols, rows])
 
   const totalPages = schema.table_config.pagination?.enabled
     ? Math.ceil(rows.length / (schema.table_config.pagination.rows_per_page || 5))
@@ -283,7 +398,7 @@ export default function MESUniversalTable({
   if (schema.table_config.header_structure) {
     buildHeader(schema.table_config.header_structure)
   } else {
-    headerRows[0] = columns.map(c => ({ label: c.field_name, columns: [c.field_id] }))
+    headerRows[0] = cols.map(c => ({ label: c.field_name, columns: [c.field_id] }))
   }
 
   return (
@@ -299,6 +414,9 @@ export default function MESUniversalTable({
         <thead className={schema.table_config.column_layout?.sticky_headers ? 'sticky top-0 z-10' : ''}>
           {headerRows.map((row, i) => (
             <tr key={i} className="bg-gray-100">
+              {schema.table_config.row_controls?.allow_add_remove && i === headerRows.length - 1 && schema.table_config.row_controls?.side === 'left' && (
+                <th className="border px-2 py-1"></th>
+              )}
               {row.map((cell, idx) => {
                 const colSpan = cell.columns ? cell.columns.length : 1
                 const rowSpan = cell.children ? 1 : headerRows.length - i
@@ -311,9 +429,15 @@ export default function MESUniversalTable({
                     style={{ backgroundColor: style.header_color, color: style.header_font_color }}
                   >
                     {cell.label}
+                    {i === headerRows.length - 1 && !cell.children && (
+                      <button onClick={() => removeColumn(idx)} className="ml-1 text-xs text-red-500">x</button>
+                    )}
                   </th>
                 )
               })}
+              {schema.table_config.row_controls?.allow_add_remove && i === headerRows.length - 1 && schema.table_config.row_controls?.side !== 'left' && (
+                <th className="border px-2 py-1"></th>
+              )}
             </tr>
           ))}
         </thead>
@@ -328,10 +452,15 @@ export default function MESUniversalTable({
                   : undefined
               }
             >
+              {schema.table_config.row_controls?.allow_add_remove && schema.table_config.row_controls?.side === 'left' && (
+                <td className="border px-2 py-1">
+                  <button onClick={() => removeRow(row.index)} className="text-red-500 text-xs">Delete</button>
+                </td>
+              )}
               {row.getVisibleCells().map(cell => (
                 flexRender(cell.column.columnDef.cell, cell.getContext())
               ))}
-              {schema.table_config.row_controls?.allow_add_remove && (
+              {schema.table_config.row_controls?.allow_add_remove && schema.table_config.row_controls?.side !== 'left' && (
                 <td className="border px-2 py-1">
                   <button onClick={() => removeRow(row.index)} className="text-red-500 text-xs">Delete</button>
                 </td>
@@ -341,8 +470,17 @@ export default function MESUniversalTable({
         </tbody>
       </table>
       {schema.table_config.row_controls?.allow_add_remove && (
-        <button onClick={addRow} className="mt-2 px-2 py-1 border rounded text-sm">Add Row</button>
+        <div className="mt-2 flex gap-2">
+          <button onClick={addRow} className="px-2 py-1 border rounded text-sm">Add Row</button>
+          <button onClick={mergeRows} className="px-2 py-1 border rounded text-sm">Merge Rows</button>
+          <button onClick={splitRow} className="px-2 py-1 border rounded text-sm">Split Row</button>
+        </div>
       )}
+      <div className="mt-2 flex gap-2">
+        <button onClick={addColumn} className="px-2 py-1 border rounded text-sm">Add Column</button>
+        <button onClick={mergeColumns} className="px-2 py-1 border rounded text-sm">Merge Columns</button>
+        <button onClick={splitColumn} className="px-2 py-1 border rounded text-sm">Split Column</button>
+      </div>
       {totalPages > 1 && (
         <div className="mt-2 flex gap-2">
           <button disabled={page === 0} onClick={() => setPage(p => p - 1)} className="border px-2 py-1 text-sm">Prev</button>

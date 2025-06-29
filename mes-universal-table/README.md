@@ -34,8 +34,11 @@ See `DemoApp.tsx` for a working example. The demo loads its schema from
 
 * Dynamic headers from schema
 * Support for multiple field types (text, number, boolean, enum, lookup, formula, image, file, signature)
-* Row add/remove controls
+* Row add/remove controls with optional left/right placement
+* Dynamically add or remove columns at runtime
+* Merge or split rows and columns
 * Validation and conditional visibility
+* Formula columns and API-driven fields
 * Pagination and sticky headers
 * Role-based edit restrictions
 * Schema-driven styling using Tailwind CSS classes
