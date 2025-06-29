@@ -8,6 +8,7 @@ import {
   getCoreRowModel,
   useReactTable,
 } from '@tanstack/react-table'
+import { Console } from 'console'
 
 /** Schema and data types */
 export interface HeaderNode {
@@ -96,9 +97,11 @@ export default function MESUniversalTable({
 
   // initialize rows with preload if data empty
   useEffect(() => {
-    if (data && data.length) {
+ //   if (data && data.length) {
+      if (data && data.length && data !== rows) {
       setRows(data)
-    } else if (schema.table_config.preload_rows) {
+   // } else if (schema.table_config.preload_rows) {
+      } else if (schema.table_config.preload_rows && rows.length === 0) {
       setRows(schema.table_config.preload_rows)
     } else {
       const count = schema.table_config.row_controls?.initial_rows || 1
@@ -264,6 +267,7 @@ export default function MESUniversalTable({
   }
 
   const addRow = () => {
+    console.log("Test");
     setRows(r => {
       const newRow: any = {}
       cols.forEach(c => {
@@ -366,7 +370,8 @@ export default function MESUniversalTable({
       accessorFn: (row: any) => row[col.field_id],
       cell: info => renderCell(col, info.row.original, info.row.index),
     }))
-  }, [cols, rows])
+  //}, [cols, rows])
+  }, [cols])
 
   const totalPages = schema.table_config.pagination?.enabled
     ? Math.ceil(rows.length / (schema.table_config.pagination.rows_per_page || 5))
@@ -383,6 +388,7 @@ export default function MESUniversalTable({
     data: paginatedRows,
     columns: columnDefs,
     getCoreRowModel: getCoreRowModel(),
+    autoResetPageIndex: false,
   })
 
   const headerRows: HeaderNode[][] = []
@@ -471,7 +477,10 @@ export default function MESUniversalTable({
                 </td>
               )}
               {row.getVisibleCells().map(cell => (
-                flexRender(cell.column.columnDef.cell, cell.getContext())
+              //  flexRender(cell.column.columnDef.cell, cell.getContext())
+              <React.Fragment key={cell.id}>
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                </React.Fragment>
               ))}
               {schema.table_config.row_controls?.allow_add_remove && schema.table_config.row_controls?.side !== 'left' && (
                 <td className="border px-2 py-1">
@@ -484,7 +493,7 @@ export default function MESUniversalTable({
       </table>
       {schema.table_config.row_controls?.allow_add_remove && (
         <div className="mt-2 flex gap-2">
-          <button type="button" onClick={addRow} className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition text-sm">Add Row</button>
+          <button type="button" onClick={addRow} className="px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 transition text-sm">Add Rows</button>
           <button type="button" onClick={mergeRows} className="px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 transition text-sm">Merge Rows</button>
           <button type="button" onClick={splitRow} className="px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 transition text-sm">Split Row</button>
         </div>
