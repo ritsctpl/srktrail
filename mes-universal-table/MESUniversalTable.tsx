@@ -95,24 +95,31 @@ export default function MESUniversalTable({
   const [rows, setRows] = useState<any[]>([])
   const [page, setPage] = useState(0)
 
-  // initialize rows with preload if data empty
+  // initialize rows with preload if data empty and sync when parent updates
+  const prevDataRef = React.useRef<any[]>(data)
   useEffect(() => {
- //   if (data && data.length) {
-      if (data && data.length && data !== rows) {
-      setRows(data)
-   // } else if (schema.table_config.preload_rows) {
-      } else if (schema.table_config.preload_rows && rows.length === 0) {
-      setRows(schema.table_config.preload_rows)
-    } else {
-      const count = schema.table_config.row_controls?.initial_rows || 1
-      const defaults = () => {
-        const obj: any = {}
-        cols.forEach(c => {
-          if (c.default_value !== undefined) obj[c.field_id] = c.default_value
-        })
-        return obj
+    if (prevDataRef.current !== data) {
+      prevDataRef.current = data
+      if (data && data.length) {
+        setRows(data)
+        return
       }
-      setRows(Array.from({ length: count }, defaults))
+    }
+
+    if (rows.length === 0) {
+      if (schema.table_config.preload_rows) {
+        setRows(schema.table_config.preload_rows)
+      } else {
+        const count = schema.table_config.row_controls?.initial_rows || 1
+        const defaults = () => {
+          const obj: any = {}
+          cols.forEach(c => {
+            if (c.default_value !== undefined) obj[c.field_id] = c.default_value
+          })
+          return obj
+        }
+        setRows(Array.from({ length: count }, defaults))
+      }
     }
   }, [data, schema.table_config])
 
