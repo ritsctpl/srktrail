@@ -94,6 +94,8 @@ export default function MESUniversalTable({
 
   const [rows, setRows] = useState<any[]>([])
   const [page, setPage] = useState(0)
+  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set())
+  const [selectedCols, setSelectedCols] = useState<Set<string>>(new Set())
 
   // initialize rows with preload if data empty and sync when parent updates
   const prevDataRef = React.useRef<any[]>(data)
@@ -289,6 +291,7 @@ export default function MESUniversalTable({
       }
       return newRows
     })
+    setSelectedRows(new Set())
   }
 
   const removeRow = (index: number) => {
@@ -301,6 +304,11 @@ export default function MESUniversalTable({
       }
       return newRows
     })
+    setSelectedRows(prev => {
+      const n = new Set(prev)
+      n.delete(index)
+      return n
+    })
   }
 
   const addColumn = () => {
@@ -309,23 +317,36 @@ export default function MESUniversalTable({
     const newCol: Column = { field_id: id, field_name: name, field_type: 'text' }
     setCols(c => [...c, newCol])
     setRows(r => r.map(row => ({ ...row, [id]: '' })))
+    setSelectedCols(new Set())
   }
 
   const removeColumnByFieldId = (fieldIdToRemove: string) => {
-    setCols(currentCols => currentCols.filter(c => c.field_id !== fieldIdToRemove));
-    setRows(currentRows => currentRows.map(row => {
-      const { [fieldIdToRemove]: _, ...rest } = row;
-      return rest;
-    }));
+    setCols(currentCols => currentCols.filter(c => c.field_id !== fieldIdToRemove))
+    setRows(currentRows =>
+      currentRows.map(row => {
+        const { [fieldIdToRemove]: _omit, ...rest } = row
+        return rest
+      })
+    )
+    setSelectedCols(prev => {
+      const n = new Set(prev)
+      n.delete(fieldIdToRemove)
+      return n
+    })
   };
 
   const mergeRows = () => {
-    if (rows.length < 2) return
+    let ids = Array.from(selectedRows)
+    if (ids.length !== 2) {
+      if (rows.length < 2) return
+      ids = [rows.length - 2, rows.length - 1]
+    }
+    ids.sort((a, b) => a - b)
     setRows(r => {
-      const a = r[r.length - 2]
-      const b = r[r.length - 1]
-      const merged = { ...a, ...b }
-      const newRows = [...r.slice(0, r.length - 2), merged]
+      const [aIdx, bIdx] = ids
+      const merged = { ...r[aIdx], ...r[bIdx] }
+      const newRows = r.filter((_, i) => i !== aIdx && i !== bIdx)
+      newRows.splice(aIdx, 0, merged)
       if (schema.table_config.pagination?.enabled) {
         const rowsPerPage = schema.table_config.pagination.rows_per_page || 5
         const lastPage = Math.max(0, Math.ceil(newRows.length / rowsPerPage) - 1)
@@ -333,40 +354,67 @@ export default function MESUniversalTable({
       }
       return newRows
     })
+    setSelectedRows(new Set())
   }
 
   const splitRow = () => {
-    if (!rows.length) return
+    const idx = selectedRows.size ? Array.from(selectedRows)[0] : rows.length - 1
+    if (idx < 0 || idx >= rows.length) return
     setRows(r => {
-      const row = r[r.length - 1]
-      const clone = { ...row }
-      return [...r, clone]
+      const clone = { ...r[idx] }
+      const newRows = [...r]
+      newRows.splice(idx + 1, 0, clone)
+      return newRows
     })
+    setSelectedRows(new Set())
   }
 
   const mergeColumns = () => {
-    if (cols.length < 2) return
+    let ids = Array.from(selectedCols)
+    if (ids.length !== 2) {
+      if (cols.length < 2) return
+      ids = [cols[cols.length - 2].field_id, cols[cols.length - 1].field_id]
+    }
+    const [idA, idB] = ids
+    const idxA = cols.findIndex(c => c.field_id === idA)
+    const idxB = cols.findIndex(c => c.field_id === idB)
+    if (idxA === -1 || idxB === -1) return
+    const a = cols[idxA]
+    const b = cols[idxB]
+    const merged: Column = { ...a, field_name: `${a.field_name}/${b.field_name}` }
     setCols(c => {
-      const a = c[c.length - 2]
-      const b = c[c.length - 1]
-      const merged: Column = { ...a, field_name: `${a.field_name}/${b.field_name}` }
-      const newCols = [...c.slice(0, c.length - 2), merged]
-      setRows(r => r.map(row => {
+      const newCols = c.filter(col => col.field_id !== idA && col.field_id !== idB)
+      newCols.splice(Math.min(idxA, idxB), 0, merged)
+      return newCols
+    })
+    setRows(r =>
+      r.map(row => {
         return {
           ...row,
           [a.field_id]: `${row[a.field_id] || ''} ${row[b.field_id] || ''}`.trim(),
         }
-      }))
-      return newCols
-    })
+      }).map(row => {
+        const { [b.field_id]: _omit, ...rest } = row
+        return rest
+      })
+    )
+    setSelectedCols(new Set())
   }
 
   const splitColumn = () => {
-    if (!cols.length) return
-    const col = cols[cols.length - 1]
+    const id = selectedCols.size ? Array.from(selectedCols)[0] : cols[cols.length - 1]?.field_id
+    if (!id) return
+    const idx = cols.findIndex(c => c.field_id === id)
+    if (idx === -1) return
+    const col = cols[idx]
     const newCol: Column = { ...col, field_id: col.field_id + '_copy', field_name: col.field_name + ' Copy' }
-    setCols(c => [...c, newCol])
+    setCols(c => {
+      const arr = [...c]
+      arr.splice(idx + 1, 0, newCol)
+      return arr
+    })
     setRows(r => r.map(row => ({ ...row, [newCol.field_id]: row[col.field_id] })))
+    setSelectedCols(new Set())
   }
 
   // build column definitions for TanStack table
@@ -430,6 +478,9 @@ export default function MESUniversalTable({
               {schema.table_config.row_controls?.allow_add_remove && i === headerRows.length - 1 && schema.table_config.row_controls?.side === 'left' && (
                 <th className="border px-2 py-1"></th>
               )}
+              {i === headerRows.length - 1 && (
+                <th className="border px-2 py-1 text-center">Sel</th>
+              )}
               {row.map((cell, idx) => {
                 const colSpan = cell.columns ? cell.columns.length : 1
                 const rowSpan = cell.children ? 1 : headerRows.length - i
@@ -441,23 +492,44 @@ export default function MESUniversalTable({
                     className="border px-2 py-1 font-bold text-center"
                     style={{ backgroundColor: style.header_color, color: style.header_font_color }}
                   >
-                    {cell.label}
-                    {
-                      // Add remove button for leaf header cells in the last row of the header
-                      i === headerRows.length - 1 &&
-                      !cell.children &&
-                      cell.columns && cell.columns.length === 1 && // Ensure it maps to a single column
-                      (
-                        <button
-                          type="button"
-                          onClick={() => removeColumnByFieldId(cell.columns[0])}
-                          className="ml-1 text-xs text-red-500 hover:text-red-700 transition focus:outline-none"
-                          title={`Remove ${cell.label} column`}
-                        >
-                          x
-                        </button>
-                      )
-                    }
+                    <div className="flex items-center gap-1 justify-center">
+                      <input
+                        type="checkbox"
+                        checked={
+                          i === headerRows.length - 1 &&
+                          cell.columns &&
+                          cell.columns.length === 1 &&
+                          selectedCols.has(cell.columns[0])
+                        }
+                        onChange={e => {
+                          if (!(i === headerRows.length - 1 && cell.columns && cell.columns.length === 1)) return
+                          const id = cell.columns[0]
+                          setSelectedCols(prev => {
+                            const n = new Set(prev)
+                            if (e.target.checked) n.add(id)
+                            else n.delete(id)
+                            return n
+                          })
+                        }}
+                      />
+                      <span>{cell.label}</span>
+                      {
+                        // Add remove button for leaf header cells in the last row of the header
+                        i === headerRows.length - 1 &&
+                        !cell.children &&
+                        cell.columns && cell.columns.length === 1 && // Ensure it maps to a single column
+                        (
+                          <button
+                            type="button"
+                            onClick={() => removeColumnByFieldId(cell.columns[0])}
+                            className="ml-1 text-xs text-red-500 hover:text-red-700 transition focus:outline-none"
+                            title={`Remove ${cell.label} column`}
+                          >
+                            x
+                          </button>
+                        )
+                      }
+                    </div>
                   </th>
                 )
               })}
@@ -483,6 +555,20 @@ export default function MESUniversalTable({
                   <button type="button" onClick={() => removeRow(row.index)} className="text-red-500 hover:text-red-700 transition text-xs">Delete</button>
                 </td>
               )}
+              <td className="border px-2 py-1 text-center">
+                <input
+                  type="checkbox"
+                  checked={selectedRows.has(row.index)}
+                  onChange={e => {
+                    setSelectedRows(prev => {
+                      const n = new Set(prev)
+                      if (e.target.checked) n.add(row.index)
+                      else n.delete(row.index)
+                      return n
+                    })
+                  }}
+                />
+              </td>
               {row.getVisibleCells().map(cell => (
               //  flexRender(cell.column.columnDef.cell, cell.getContext())
               <React.Fragment key={cell.id}>

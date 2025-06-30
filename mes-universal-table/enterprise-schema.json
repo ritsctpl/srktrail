@@ -1,0 +1,101 @@
+{
+  "table_config": {
+    "header_structure": [
+      {
+        "label": "Batch Info",
+        "children": [
+          {
+            "label": "Identifiers",
+            "columns": ["batch_no", "stage_no", "equipment_id"]
+          }
+        ]
+      },
+      {
+        "label": "Measurements",
+        "children": [
+          {
+            "label": "Environmental",
+            "columns": ["temp_c", "humidity", "pressure"]
+          },
+          {
+            "label": "Results",
+            "columns": ["status", "approved", "deviation_flag"]
+          }
+        ]
+      },
+      {
+        "label": "Dynamic Measurements",
+        "children": [
+          {
+            "label": "Parameters",
+            "columns": ["parameter"]
+          },
+          {
+            "label": "Observations",
+            "children": [
+              {
+                "label": "RHS",
+                "columns": ["rhs_observation"]
+              },
+              {
+                "label": "LHS",
+                "columns": ["lhs_observation"]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "label": "Documentation",
+        "columns": ["remarks", "attached_image", "certificate_file", "review_signature"]
+      }
+    ],
+    "columns": [
+      { "field_id": "batch_no", "field_name": "Batch No", "field_type": "text", "required": true },
+      { "field_id": "stage_no", "field_name": "Stage No", "field_type": "number", "required": true },
+      { "field_id": "equipment_id", "field_name": "Equipment ID", "field_type": "lookup", "endpoint": "/api/equipment", "bind_field": "equipment_code", "required": true },
+      { "field_id": "temp_c", "field_name": "Temperature (\u00b0C)", "field_type": "number", "unit": "\u00b0C", "precision": 1, "validation": { "min": 20, "max": 30 } },
+      { "field_id": "humidity", "field_name": "Humidity (%)", "field_type": "number", "unit": "%", "precision": 1, "validation": { "min": 40, "max": 70 } },
+      { "field_id": "pressure", "field_name": "Pressure (Pa)", "field_type": "number", "unit": "Pa", "precision": 1 },
+      { "field_id": "avg_temp_humidity", "field_name": "Avg Temp-Humidity", "field_type": "formula", "formula": "(temp_c + humidity) / 2", "precision": 2, "read_only": true },
+      {
+        "field_id": "status",
+        "field_name": "Status",
+        "field_type": "enum",
+        "options": [
+          { "label": "PASS", "value": "pass" },
+          { "label": "FAIL", "value": "fail" },
+          { "label": "HOLD", "value": "hold" }
+        ],
+        "required": true
+      },
+      { "field_id": "approved", "field_name": "Approved", "field_type": "boolean", "default_value": false },
+      { "field_id": "deviation_flag", "field_name": "Deviation Raised", "field_type": "boolean", "default_value": false },
+      { "field_id": "parameter", "field_name": "Parameter", "field_type": "text", "read_only": true },
+      { "field_id": "rhs_observation", "field_name": "RHS Observation", "field_type": "number" },
+      { "field_id": "lhs_observation", "field_name": "LHS Observation", "field_type": "number" },
+      { "field_id": "remarks", "field_name": "Remarks", "field_type": "text", "multiline": true, "max_length": 1000, "visibility_condition": "status == 'fail'", "rows": 5 },
+      { "field_id": "attached_image", "field_name": "Machine Clean Status Photo", "field_type": "image", "capture_camera": true, "max_size_mb": 5 },
+      { "field_id": "certificate_file", "field_name": "Cleaning Certificate PDF", "field_type": "file", "file_types": ["pdf"], "max_size_mb": 10 },
+      { "field_id": "review_signature", "field_name": "Line Clearance Signature", "field_type": "signature", "signed_by_role": ["QA", "Supervisor"], "required": true }
+    ],
+    "preload_rows": [
+      { "row_sequence": 1, "component_version": "6.0", "batch_no": "", "stage_no": "", "equipment_id": "" },
+      { "temp_c": "", "humidity": "", "pressure": "" },
+      { "status": "", "approved": "", "deviation_flag": "" },
+      { "remarks": "", "attached_image": "", "certificate_file": "", "review_signature": "" },
+      { "parameter": "Appearance of one rotation + 5 tablets", "allow_sides": true },
+      { "parameter": "Group Wt. of 20 Tablets", "allow_sides": false },
+      { "parameter": "Individual Wt. one rotation + 5 tablets", "allow_sides": true },
+      { "parameter": "Uniformity of weight of 20 tablets", "allow_sides": true },
+      { "parameter": "Hardness", "allow_sides": true },
+      { "parameter": "Thickness", "allow_sides": true },
+      { "parameter": "Friability", "allow_sides": false },
+      { "parameter": "Disintegration Time", "allow_sides": false }
+    ],
+    "row_controls": { "mode": "growing", "min_rows": 5, "max_rows": 500, "allow_add_remove": true, "initial_rows": 5 },
+    "pagination": { "enabled": true, "rows_per_page": 20 },
+    "column_layout": { "column_count": 16, "column_width_mode": "auto", "sticky_headers": true, "resizable_columns": true },
+    "style": { "table_border": true, "striped_rows": true, "alternate_row_color": "#f6f6f6", "header_color": "#003366", "header_font_color": "#ffffff" }
+  }
+}
